@@ -1,0 +1,13 @@
+project_id = "tpic"
+
+[db]
+port = 54322
+
+[api]
+enabled = true
+port = 54321
+
+[auth]
+enabled = true
+# TPIC has no public sign ups. Team logins are created by an owner in the dashboard.
+enable_signup = false
