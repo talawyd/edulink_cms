@@ -12,6 +12,7 @@ import {
 import type { Tables } from '@/types/database.types'
 import { keyEmail, reminderEmail } from '@/lib/emailTemplates'
 import { Button } from '@/components/ui/Button'
+import { LinkButton } from '@/components/ui/LinkButton'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { FormField, FieldInput, FieldSelect } from '@/components/ui/FormField'
 import { ErrorBanner } from '@/components/ui/ErrorBanner'
@@ -156,11 +157,9 @@ export function SubscriptionTab({
           </span>
         ) : school.contact_email ? (
           <div className="flex items-center gap-3">
-            <a href={keyEmail(school.name, school.contact_email, r.expires_on, r.key_text)}>
-              <Button size="sm" variant="secondary">
-                Email
-              </Button>
-            </a>
+            <LinkButton href={keyEmail(school.name, school.contact_email, r.expires_on, r.key_text)}>
+              Email
+            </LinkButton>
             <Button size="sm" variant="ghost" onClick={() => handleMarkSent(r)}>
               Mark as sent
             </Button>
@@ -266,11 +265,12 @@ export function SubscriptionTab({
         <h3 className="font-display font-700 mb-1">Renewal reminder</h3>
         <p className="text-sm text-muted mb-4">Sends no email itself — opens your mail client with the message prefilled.</p>
         {subscription?.license_expires_on && school.contact_email ? (
-          <a href={reminderEmail(school.name, school.contact_email, subscription.license_expires_on)}>
-            <Button size="sm" variant="secondary" onClick={handleSendReminder}>
-              Prepare reminder email
-            </Button>
-          </a>
+          <LinkButton
+            href={reminderEmail(school.name, school.contact_email, subscription.license_expires_on)}
+            onClick={handleSendReminder}
+          >
+            Prepare reminder email
+          </LinkButton>
         ) : (
           <p className="text-sm text-muted italic">Needs a subscription expiry and a contact email on file.</p>
         )}

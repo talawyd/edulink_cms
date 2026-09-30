@@ -4,6 +4,7 @@ import type { SchoolDetail } from '@/lib/data/schools'
 import { updateSchoolProject, setSchoolStatus, testAddress, type ResolvedSchool } from '@/lib/data/schools'
 import { supabaseDashboardLinks, schoolAddress } from '@/lib/constants'
 import { Button } from '@/components/ui/Button'
+import { LinkButton } from '@/components/ui/LinkButton'
 import { Modal } from '@/components/ui/Modal'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { FormField, FieldInput, FieldSelect, FieldTextarea } from '@/components/ui/FormField'
@@ -105,21 +106,15 @@ export function OverviewTab({
         )}
         {links && (
           <div className="flex flex-wrap gap-2 mt-4">
-            <a href={links.users} target="_blank" rel="noreferrer">
-              <Button size="sm" variant="secondary">
-                Users <ExternalLink className="h-3.5 w-3.5" />
-              </Button>
-            </a>
-            <a href={links.sqlEditor} target="_blank" rel="noreferrer">
-              <Button size="sm" variant="secondary">
-                SQL editor <ExternalLink className="h-3.5 w-3.5" />
-              </Button>
-            </a>
-            <a href={links.apiKeys} target="_blank" rel="noreferrer">
-              <Button size="sm" variant="secondary">
-                API keys <ExternalLink className="h-3.5 w-3.5" />
-              </Button>
-            </a>
+            <LinkButton href={links.users} target="_blank" rel="noreferrer">
+              Users <ExternalLink className="h-3.5 w-3.5" />
+            </LinkButton>
+            <LinkButton href={links.sqlEditor} target="_blank" rel="noreferrer">
+              SQL editor <ExternalLink className="h-3.5 w-3.5" />
+            </LinkButton>
+            <LinkButton href={links.apiKeys} target="_blank" rel="noreferrer">
+              API keys <ExternalLink className="h-3.5 w-3.5" />
+            </LinkButton>
           </div>
         )}
       </div>

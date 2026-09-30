@@ -13,6 +13,7 @@ import {
 } from '@/lib/runbook'
 import { CopyButton } from '@/components/ui/CopyButton'
 import { Button } from '@/components/ui/Button'
+import { LinkButton } from '@/components/ui/LinkButton'
 import { FormField, FieldInput } from '@/components/ui/FormField'
 import { ErrorBanner } from '@/components/ui/ErrorBanner'
 import { useAuth } from '@/contexts/AuthContext'
@@ -52,11 +53,9 @@ function RunbookCard({
             <div className="flex items-center gap-4">
               <CopyButton value={sql} onCopy={onCopy} />
               {sqlEditorUrl && (
-                <a href={sqlEditorUrl} target="_blank" rel="noreferrer">
-                  <Button size="sm" variant="secondary">
-                    Open SQL editor
-                  </Button>
-                </a>
+                <LinkButton href={sqlEditorUrl} target="_blank" rel="noreferrer">
+                  Open SQL editor
+                </LinkButton>
               )}
             </div>
           </>
@@ -128,11 +127,9 @@ export function RunbookTab({
                 onCopy={() => log('runbook_first_admin_copied')}
               />
               {sqlEditorUrl && (
-                <a href={sqlEditorUrl} target="_blank" rel="noreferrer">
-                  <Button size="sm" variant="secondary">
-                    Open SQL editor
-                  </Button>
-                </a>
+                <LinkButton href={sqlEditorUrl} target="_blank" rel="noreferrer">
+                  Open SQL editor
+                </LinkButton>
               )}
             </div>
           </>
@@ -219,11 +216,9 @@ export function RunbookTab({
                 onCopy={() => log('runbook_forgotten_password_copied')}
               />
               {sqlEditorUrl && (
-                <a href={sqlEditorUrl} target="_blank" rel="noreferrer">
-                  <Button size="sm" variant="secondary">
-                    Open SQL editor
-                  </Button>
-                </a>
+                <LinkButton href={sqlEditorUrl} target="_blank" rel="noreferrer">
+                  Open SQL editor
+                </LinkButton>
               )}
             </div>
           </>
