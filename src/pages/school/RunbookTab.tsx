@@ -2,7 +2,15 @@ import { useState } from 'react'
 import type { SchoolDetail } from '@/lib/data/schools'
 import { logOperation } from '@/lib/data/schools'
 import { supabaseDashboardLinks } from '@/lib/constants'
-import { schoolSettingsSql, firstAdminSql, forgottenPasswordSql, generatePassword, EMAIL_PATTERN } from '@/lib/runbook'
+import {
+  schoolSettingsSql,
+  firstAdminSql,
+  licenceRowSql,
+  rotateSecretSql,
+  forgottenPasswordSql,
+  generatePassword,
+  EMAIL_PATTERN,
+} from '@/lib/runbook'
 import { CopyButton } from '@/components/ui/CopyButton'
 import { Button } from '@/components/ui/Button'
 import { FormField, FieldInput } from '@/components/ui/FormField'
@@ -58,8 +66,16 @@ function RunbookCard({
   )
 }
 
-export function RunbookTab({ detail }: { detail: SchoolDetail }) {
-  const { school, project } = detail
+export function RunbookTab({
+  detail,
+  defaultGraceDays,
+  signingSecret,
+}: {
+  detail: SchoolDetail
+  defaultGraceDays: number
+  signingSecret: string
+}) {
+  const { school, project, subscription } = detail
   const sqlEditorUrl = project ? supabaseDashboardLinks(project.supabase_project_ref).sqlEditor : undefined
 
   const [adminEmail, setAdminEmail] = useState('')
@@ -128,19 +144,27 @@ export function RunbookTab({ detail }: { detail: SchoolDetail }) {
       <RunbookCard
         step={3}
         title="Licence row"
-        description="Uses the signing secret created for this school."
-        sql={null}
-        disabled
-        disabledReason="Not built yet — the Subscription panel (Phase 3) creates the signing secret this step needs."
+        description="Uses the signing secret just created for this school and its subscription expiry."
+        sql={
+          signingSecret && subscription?.license_expires_on
+            ? licenceRowSql(subscription.license_expires_on, defaultGraceDays, signingSecret)
+            : null
+        }
+        sqlEditorUrl={sqlEditorUrl}
+        onCopy={() => log('runbook_licence_row_copied')}
+        disabled={!signingSecret || !subscription?.license_expires_on}
+        disabledReason="Create a signing secret in the Subscription tab first — it's shown once, right here, when you do."
       />
 
       <RunbookCard
         step={4}
         title="After rotating the signing secret"
-        description="Updates the school's stored secret to match a newly rotated one."
-        sql={null}
-        disabled
-        disabledReason="Not built yet — the Subscription panel (Phase 3) rotates the signing secret this step needs."
+        description="Updates the school's stored secret to match the one just rotated."
+        sql={signingSecret ? rotateSecretSql(signingSecret) : null}
+        sqlEditorUrl={sqlEditorUrl}
+        onCopy={() => log('runbook_secret_rotated_copied')}
+        disabled={!signingSecret}
+        disabledReason="Rotate the signing secret in the Subscription tab first — it's shown once, right here, when you do."
       />
 
       <div className="bg-surface border border-border rounded-2xl p-6">

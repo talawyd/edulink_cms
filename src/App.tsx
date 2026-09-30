@@ -9,6 +9,7 @@ import MfaPromptPage from '@/pages/MfaPromptPage'
 import NotOnTeamPage from '@/pages/NotOnTeamPage'
 import SecurityPage from '@/pages/SecurityPage'
 import SchoolsPage from '@/pages/SchoolsPage'
+import RenewalsPage from '@/pages/RenewalsPage'
 import SchoolDetailPage from '@/pages/school/SchoolDetailPage'
 import NotBuiltPage from '@/pages/NotBuiltPage'
 
@@ -33,7 +34,7 @@ export default function App() {
                 <Route path="/" element={<Navigate to="/schools" replace />} />
                 <Route path="/schools" element={<SchoolsPage />} />
                 <Route path="/schools/:id" element={<SchoolDetailPage />} />
-                <Route path="/renewals" element={<NotBuiltPage title="Renewals" />} />
+                <Route path="/renewals" element={<RenewalsPage />} />
                 <Route path="/team" element={<NotBuiltPage title="Team" />} />
                 <Route path="/settings" element={<NotBuiltPage title="Settings" />} />
                 <Route path="/activity" element={<NotBuiltPage title="Activity" />} />
