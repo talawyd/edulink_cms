@@ -471,7 +471,6 @@ export type Database = {
           p_contact_email: string
           p_contact_name: string
           p_contact_phone: string
-          p_expires_on: string
           p_name: string
           p_plan: string
           p_price: number

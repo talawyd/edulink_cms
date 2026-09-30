@@ -3,12 +3,10 @@ import { Check } from 'lucide-react'
 import type { SchoolDetail } from '@/lib/data/schools'
 import { setChecklistStep, clearChecklistStep } from '@/lib/data/schools'
 import { CHECKLIST_STEPS } from '@/lib/constants'
-import { useAuth } from '@/contexts/AuthContext'
 import { ErrorBanner } from '@/components/ui/ErrorBanner'
 import { errorMessage } from '@/lib/errorMessage'
 
 export function ChecklistTab({ detail, onReload }: { detail: SchoolDetail; onReload: () => Promise<void> }) {
-  const { staff } = useAuth()
   const [busyKey, setBusyKey] = useState<string | null>(null)
   const [error, setError] = useState('')
 
@@ -22,7 +20,7 @@ export function ChecklistTab({ detail, onReload }: { detail: SchoolDetail; onRel
       if (done.has(key)) {
         await clearChecklistStep(detail.school.id, key)
       } else {
-        await setChecklistStep(detail.school.id, key, staff?.full_name ?? 'TPIC')
+        await setChecklistStep(detail.school.id, key)
       }
       await onReload()
     } catch (e) {

@@ -61,26 +61,20 @@ export type CreateSchoolInput = {
 
 export type CreateSchoolResult = { school_id: string; hostname: string; code: string; license_expires_on: string }
 
-// TODO: drop this cast once database.types.ts is regenerated against migration
-// 0006 (create_school now takes 11 args, no p_expires_on) — the checked-in
-// types still describe the old 12-arg signature.
 export async function createSchool(input: CreateSchoolInput): Promise<CreateSchoolResult> {
-  const { data, error } = await supabase.rpc(
-    'create_school',
-    {
-      p_code: input.code,
-      p_name: input.name,
-      p_contact_name: input.contactName,
-      p_contact_email: input.contactEmail,
-      p_contact_phone: input.contactPhone,
-      p_supabase_url: input.supabaseUrl,
-      p_publishable_key: input.publishableKey,
-      p_region: input.region,
-      p_plan: input.plan,
-      p_billing_cycle: input.billingCycle,
-      p_price: input.price,
-    } as never,
-  )
+  const { data, error } = await supabase.rpc('create_school', {
+    p_code: input.code,
+    p_name: input.name,
+    p_contact_name: input.contactName,
+    p_contact_email: input.contactEmail,
+    p_contact_phone: input.contactPhone,
+    p_supabase_url: input.supabaseUrl,
+    p_publishable_key: input.publishableKey,
+    p_region: input.region,
+    p_plan: input.plan,
+    p_billing_cycle: input.billingCycle,
+    p_price: input.price,
+  })
   if (error) throw error
   return data as unknown as CreateSchoolResult
 }
@@ -123,10 +117,8 @@ export async function testAddress(hostname: string): Promise<ResolvedSchool | nu
   return data?.[0] ?? null
 }
 
-export async function setChecklistStep(schoolId: string, stepKey: string, doneBy: string, note?: string) {
-  const { error } = await supabase
-    .from('school_checklist')
-    .upsert({ school_id: schoolId, step_key: stepKey, done_at: new Date().toISOString(), done_by: doneBy, note })
+export async function setChecklistStep(schoolId: string, stepKey: string, note?: string) {
+  const { error } = await supabase.from('school_checklist').upsert({ school_id: schoolId, step_key: stepKey, note })
   if (error) throw error
 }
 

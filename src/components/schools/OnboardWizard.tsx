@@ -6,7 +6,6 @@ import { FormField, FieldInput, FieldSelect } from '@/components/ui/FormField'
 import { createSchool, setChecklistStep, type CreateSchoolResult } from '@/lib/data/schools'
 import { getPlatformSettings } from '@/lib/data/settings'
 import { schoolAddress } from '@/lib/constants'
-import { useAuth } from '@/contexts/AuthContext'
 import { errorMessage } from '@/lib/errorMessage'
 
 const BLOCKED_KEY_PREFIXES = ['sb_secret_', 'eyJ']
@@ -34,7 +33,6 @@ export function OnboardWizard({
   onClose: () => void
   onCreated: (schoolId: string) => void
 }) {
-  const { staff } = useAuth()
   const [platformDomain, setPlatformDomain] = useState('')
   const [form, setForm] = useState(initialForm)
   const [busy, setBusy] = useState(false)
@@ -82,7 +80,7 @@ export function OnboardWizard({
         billingCycle: form.billingCycle,
         price: Number(form.price),
       })
-      await setChecklistStep(created.school_id, 'registered_in_tpic', staff?.full_name ?? 'TPIC')
+      await setChecklistStep(created.school_id, 'registered_in_tpic')
       setResult(created)
     } catch (e) {
       setError(errorMessage(e))
