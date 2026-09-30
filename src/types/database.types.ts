@@ -480,6 +480,10 @@ export type Database = {
         }
         Returns: Json
       }
+      delete_school: {
+        Args: { p_confirm_code: string; p_school_id: string }
+        Returns: undefined
+      }
       generate_license_key: {
         Args: { p_school_id: string; p_years?: number }
         Returns: Json
