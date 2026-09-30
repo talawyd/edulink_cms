@@ -11,6 +11,7 @@ import { ErrorBanner } from '@/components/ui/ErrorBanner'
 import { StatusBadge } from '@/components/ui/Badge'
 import { useToast } from '@/components/ui/Toast'
 import { errorMessage } from '@/lib/errorMessage'
+import { DeleteSchoolSection } from './DeleteSchoolSection'
 
 const STATUSES = ['pending', 'active', 'suspended', 'offboarded']
 
@@ -148,6 +149,8 @@ export function OverviewTab({
           Change status
         </Button>
       </div>
+
+      <DeleteSchoolSection schoolId={school.id} code={school.code} />
 
       <Modal open={editOpen} onClose={() => setEditOpen(false)} title="Edit connection">
         <EditConnectionForm

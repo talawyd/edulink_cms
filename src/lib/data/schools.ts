@@ -103,6 +103,16 @@ export async function setSchoolStatus(schoolId: string, status: string, reason: 
   if (error) throw error
 }
 
+// TODO: drop this cast once database.types.ts is regenerated against
+// migration 0007 — delete_school isn't in the checked-in types yet.
+export async function deleteSchool(schoolId: string, confirmCode: string) {
+  const { error } = await supabase.rpc(
+    'delete_school' as never,
+    { p_school_id: schoolId, p_confirm_code: confirmCode } as never,
+  )
+  if (error) throw error
+}
+
 export type ResolvedSchool = {
   anon_key: string
   school_code: string
