@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Modal } from './Modal'
 import { Button } from './Button'
 import { ErrorBanner } from './ErrorBanner'
+import { errorMessage } from '@/lib/errorMessage'
 
 export function ConfirmDialog({
   open,
@@ -30,7 +31,7 @@ export function ConfirmDialog({
       await onConfirm()
       onClose()
     } catch (e) {
-      setError(e instanceof Error ? e.message : String(e))
+      setError(errorMessage(e))
     } finally {
       setBusy(false)
     }

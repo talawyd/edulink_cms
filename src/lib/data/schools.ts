@@ -57,26 +57,30 @@ export type CreateSchoolInput = {
   plan: string
   billingCycle: string
   price: number
-  expiresOn: string
 }
 
-export type CreateSchoolResult = { school_id: string; hostname: string; code: string }
+export type CreateSchoolResult = { school_id: string; hostname: string; code: string; license_expires_on: string }
 
+// TODO: drop this cast once database.types.ts is regenerated against migration
+// 0006 (create_school now takes 11 args, no p_expires_on) — the checked-in
+// types still describe the old 12-arg signature.
 export async function createSchool(input: CreateSchoolInput): Promise<CreateSchoolResult> {
-  const { data, error } = await supabase.rpc('create_school', {
-    p_code: input.code,
-    p_name: input.name,
-    p_contact_name: input.contactName,
-    p_contact_email: input.contactEmail,
-    p_contact_phone: input.contactPhone,
-    p_supabase_url: input.supabaseUrl,
-    p_publishable_key: input.publishableKey,
-    p_region: input.region,
-    p_plan: input.plan,
-    p_billing_cycle: input.billingCycle,
-    p_price: input.price,
-    p_expires_on: input.expiresOn,
-  })
+  const { data, error } = await supabase.rpc(
+    'create_school',
+    {
+      p_code: input.code,
+      p_name: input.name,
+      p_contact_name: input.contactName,
+      p_contact_email: input.contactEmail,
+      p_contact_phone: input.contactPhone,
+      p_supabase_url: input.supabaseUrl,
+      p_publishable_key: input.publishableKey,
+      p_region: input.region,
+      p_plan: input.plan,
+      p_billing_cycle: input.billingCycle,
+      p_price: input.price,
+    } as never,
+  )
   if (error) throw error
   return data as unknown as CreateSchoolResult
 }

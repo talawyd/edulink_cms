@@ -4,6 +4,7 @@ import type { Tables } from '@/types/database.types'
 import { Table, type Column } from '@/components/ui/Table'
 import { ErrorBanner } from '@/components/ui/ErrorBanner'
 import { PageSpinner } from '@/components/ui/Spinner'
+import { errorMessage } from '@/lib/errorMessage'
 
 type LogRow = Tables<'operations_log'>
 
@@ -14,7 +15,7 @@ export function ActivityTab({ schoolId }: { schoolId: string }) {
   useEffect(() => {
     fetchSchoolActivity(schoolId)
       .then(setRows)
-      .catch((e) => setError(e instanceof Error ? e.message : String(e)))
+      .catch((e) => setError(errorMessage(e)))
   }, [schoolId])
 
   const columns: Column<LogRow>[] = [

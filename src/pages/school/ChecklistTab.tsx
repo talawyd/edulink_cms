@@ -5,6 +5,7 @@ import { setChecklistStep, clearChecklistStep } from '@/lib/data/schools'
 import { CHECKLIST_STEPS } from '@/lib/constants'
 import { useAuth } from '@/contexts/AuthContext'
 import { ErrorBanner } from '@/components/ui/ErrorBanner'
+import { errorMessage } from '@/lib/errorMessage'
 
 export function ChecklistTab({ detail, onReload }: { detail: SchoolDetail; onReload: () => Promise<void> }) {
   const { staff } = useAuth()
@@ -25,7 +26,7 @@ export function ChecklistTab({ detail, onReload }: { detail: SchoolDetail; onRel
       }
       await onReload()
     } catch (e) {
-      setError(e instanceof Error ? e.message : String(e))
+      setError(errorMessage(e))
     } finally {
       setBusyKey(null)
     }

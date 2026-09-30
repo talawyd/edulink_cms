@@ -101,8 +101,9 @@ begin
 
   -- B. ONBOARDING A SCHOOL IN ONE STEP
   begin
-  select public.create_school(c1, 'Test School', 'Head', 'head@example.com', '+264', url1, key1, 'af-south-1', 'standard', 'annual', 12000, current_date + 30) into res;
+  select public.create_school(c1, 'Test School', 'Head', 'head@example.com', '+264', url1, key1, 'af-south-1', 'standard', 'annual', 12000) into res;
   sid := (res->>'school_id')::uuid;
+  report := report || format(E'%s | create_school returns the auto calculated expiry, exactly one year out | expected %s, got %s\n', case when (res->>'license_expires_on')::date = current_date + interval '1 year' then 'PASS' else 'FAIL' end, current_date + interval '1 year', res->>'license_expires_on');
   report := report || format(E'%s | the address is built from the code and the platform domain | expected %s, got %s\n', case when res->>'hostname' = c1 || '.edulink.live' then 'PASS' else 'FAIL' end, c1 || '.edulink.live', res->>'hostname');
   n := (select count(*) from public.schools where id = sid and status = 'pending');
   report := report || format(E'%s | the school row exists and starts as pending | expected 1, got %s\n', case when n = 1 then 'PASS' else 'FAIL' end, n);
@@ -110,7 +111,7 @@ begin
   report := report || format(E'%s | the project row exists and holds the project reference | expected 1, got %s\n', case when n = 1 then 'PASS' else 'FAIL' end, n);
   n := (select count(*) from public.school_domains where school_id = sid and hostname = c1 || '.edulink.live' and is_primary and domain_type = 'platform_subdomain');
   report := report || format(E'%s | the address row exists and is primary | expected 1, got %s\n', case when n = 1 then 'PASS' else 'FAIL' end, n);
-  n := (select count(*) from public.subscriptions where school_id = sid and license_expires_on = current_date + 30);
+  n := (select count(*) from public.subscriptions where school_id = sid and license_expires_on = current_date + interval '1 year');
   report := report || format(E'%s | the subscription exists with its expiry | expected 1, got %s\n', case when n = 1 then 'PASS' else 'FAIL' end, n);
   n := (select count(*) from public.operations_log where school_id = sid and action = 'school_created');
   report := report || format(E'%s | the onboarding was recorded in the activity log | expected 1, got %s\n', case when n = 1 then 'PASS' else 'FAIL' end, n);
@@ -128,73 +129,61 @@ begin
   r1 := 'zz' || tag;
   r2 := 'zy' || tag;
   begin
-    perform public.create_school(r1, 'Test School', 'Head', 'head@example.com', '+264', url2, 'sb_secret_' || substr(md5(random()::text) || md5(random()::text), 1, 30), 'af-south-1', 'standard', 'annual', 12000, current_date + 30);
+    perform public.create_school(r1, 'Test School', 'Head', 'head@example.com', '+264', url2, 'sb_secret_' || substr(md5(random()::text) || md5(random()::text), 1, 30), 'af-south-1', 'standard', 'annual', 12000);
     report := report || E'FAIL | A SECRET key is refused (it was allowed)\n';
   exception when others then
     report := report || E'PASS | A SECRET key is refused\n';
   end;
   begin
-    perform public.create_school(r1, 'Test School', 'Head', 'head@example.com', '+264', url2, 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.abcdefghijklmnop.abcdefghijklmnopqrstuv', 'af-south-1', 'standard', 'annual', 12000, current_date + 30);
+    perform public.create_school(r1, 'Test School', 'Head', 'head@example.com', '+264', url2, 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.abcdefghijklmnop.abcdefghijklmnopqrstuv', 'af-south-1', 'standard', 'annual', 12000);
     report := report || E'FAIL | A legacy JWT style key is refused (it was allowed)\n';
   exception when others then
     report := report || E'PASS | A legacy JWT style key is refused\n';
   end;
   begin
-    perform public.create_school(r1, 'Test School', 'Head', 'head@example.com', '+264', url2, 'not-a-key', 'af-south-1', 'standard', 'annual', 12000, current_date + 30);
+    perform public.create_school(r1, 'Test School', 'Head', 'head@example.com', '+264', url2, 'not-a-key', 'af-south-1', 'standard', 'annual', 12000);
     report := report || E'FAIL | A key with no prefix is refused (it was allowed)\n';
   exception when others then
     report := report || E'PASS | A key with no prefix is refused\n';
   end;
   begin
-    perform public.create_school(r1, 'Test School', 'Head', 'head@example.com', '+264', url2, 'sb_publishable_ abcdefghijklmnopqrstuvwxyz1234', 'af-south-1', 'standard', 'annual', 12000, current_date + 30);
+    perform public.create_school(r1, 'Test School', 'Head', 'head@example.com', '+264', url2, 'sb_publishable_ abcdefghijklmnopqrstuvwxyz1234', 'af-south-1', 'standard', 'annual', 12000);
     report := report || E'FAIL | A key with a space in it is refused (it was allowed)\n';
   exception when others then
     report := report || E'PASS | A key with a space in it is refused\n';
   end;
   begin
-    perform public.create_school(r1, 'Test School', 'Head', 'head@example.com', '+264', 'https://example.com', key2, 'af-south-1', 'standard', 'annual', 12000, current_date + 30);
+    perform public.create_school(r1, 'Test School', 'Head', 'head@example.com', '+264', 'https://example.com', key2, 'af-south-1', 'standard', 'annual', 12000);
     report := report || E'FAIL | A project address that is not a Supabase address is refused (it was allowed)\n';
   exception when others then
     report := report || E'PASS | A project address that is not a Supabase address is refused\n';
   end;
   begin
-    perform public.create_school(r1, 'Test School', 'Head', 'head@example.com', '+264', 'https://short.supabase.co', key2, 'af-south-1', 'standard', 'annual', 12000, current_date + 30);
+    perform public.create_school(r1, 'Test School', 'Head', 'head@example.com', '+264', 'https://short.supabase.co', key2, 'af-south-1', 'standard', 'annual', 12000);
     report := report || E'FAIL | A project address with the wrong length is refused (it was allowed)\n';
   exception when others then
     report := report || E'PASS | A project address with the wrong length is refused\n';
   end;
   begin
-    perform public.create_school('tpic', 'Test School', 'Head', 'head@example.com', '+264', url2, key2, 'af-south-1', 'standard', 'annual', 12000, current_date + 30);
+    perform public.create_school('tpic', 'Test School', 'Head', 'head@example.com', '+264', url2, key2, 'af-south-1', 'standard', 'annual', 12000);
     report := report || E'FAIL | A reserved code is refused by onboarding (it was allowed)\n';
   exception when others then
     report := report || E'PASS | A reserved code is refused by onboarding\n';
   end;
   begin
-    perform public.create_school('My School', 'Test School', 'Head', 'head@example.com', '+264', url2, key2, 'af-south-1', 'standard', 'annual', 12000, current_date + 30);
+    perform public.create_school('My School', 'Test School', 'Head', 'head@example.com', '+264', url2, key2, 'af-south-1', 'standard', 'annual', 12000);
     report := report || E'FAIL | A code with capital letters and spaces is refused (it was allowed)\n';
   exception when others then
     report := report || E'PASS | A code with capital letters and spaces is refused\n';
   end;
   begin
-    perform public.create_school(r1, 'Test School', 'Head', 'head@example.com', '+264', url2, key2, 'af-south-1', 'standard', 'annual', 12000, current_date - 1);
-    report := report || E'FAIL | A past expiry date is refused (it was allowed)\n';
-  exception when others then
-    report := report || E'PASS | A past expiry date is refused\n';
-  end;
-  begin
-    perform public.create_school(r1, 'Test School', 'Head', 'head@example.com', '+264', url2, key2, 'af-south-1', 'standard', 'annual', 12000, current_date + 3650);
-    report := report || E'FAIL | An expiry ten years away is refused (it was allowed)\n';
-  exception when others then
-    report := report || E'PASS | An expiry ten years away is refused\n';
-  end;
-  begin
-    perform public.create_school(c1, 'Test School', 'Head', 'head@example.com', '+264', url2, key2, 'af-south-1', 'standard', 'annual', 12000, current_date + 30);
+    perform public.create_school(c1, 'Test School', 'Head', 'head@example.com', '+264', url2, key2, 'af-south-1', 'standard', 'annual', 12000);
     report := report || E'FAIL | A duplicate school code is refused (it was allowed)\n';
   exception when others then
     report := report || E'PASS | A duplicate school code is refused\n';
   end;
   begin
-    perform public.create_school(r2, 'Test School', 'Head', 'head@example.com', '+264', url1, key2, 'af-south-1', 'standard', 'annual', 12000, current_date + 30);
+    perform public.create_school(r2, 'Test School', 'Head', 'head@example.com', '+264', url1, key2, 'af-south-1', 'standard', 'annual', 12000);
     report := report || E'FAIL | A duplicate project is refused, even with a new code (it was allowed)\n';
   exception when others then
     report := report || E'PASS | A duplicate project is refused, even with a new code\n';
@@ -219,7 +208,7 @@ begin
   perform set_config('request.jwt.claim.sub', sup::text, true);
   perform set_config('request.jwt.claims', json_build_object('sub', sup, 'role', 'authenticated', 'aal', 'aal1')::text, true);
   begin
-    perform public.create_school(r2, 'Test School', 'Head', 'head@example.com', '+264', url2, key2, 'af-south-1', 'standard', 'annual', 12000, current_date + 30);
+    perform public.create_school(r2, 'Test School', 'Head', 'head@example.com', '+264', url2, key2, 'af-south-1', 'standard', 'annual', 12000);
     report := report || E'FAIL | Support staff cannot onboard a school (it was allowed)\n';
   exception when insufficient_privilege then
     report := report || E'PASS | Support staff cannot onboard a school\n';
@@ -227,7 +216,7 @@ begin
   perform set_config('request.jwt.claim.sub', nobody::text, true);
   perform set_config('request.jwt.claims', json_build_object('sub', nobody, 'role', 'authenticated', 'aal', 'aal1')::text, true);
   begin
-    perform public.create_school(r2, 'Test School', 'Head', 'head@example.com', '+264', url2, key2, 'af-south-1', 'standard', 'annual', 12000, current_date + 30);
+    perform public.create_school(r2, 'Test School', 'Head', 'head@example.com', '+264', url2, key2, 'af-south-1', 'standard', 'annual', 12000);
     report := report || E'FAIL | A logged in stranger cannot onboard a school (it was allowed)\n';
   exception when insufficient_privilege then
     report := report || E'PASS | A logged in stranger cannot onboard a school\n';
@@ -284,7 +273,7 @@ begin
     report := report || E'PASS | A logged out visitor cannot read the school projects table\n';
   end;
   begin
-    perform public.create_school(r2, 'Test School', 'Head', 'head@example.com', '+264', url2, key2, 'af-south-1', 'standard', 'annual', 12000, current_date + 30);
+    perform public.create_school(r2, 'Test School', 'Head', 'head@example.com', '+264', url2, key2, 'af-south-1', 'standard', 'annual', 12000);
     report := report || E'FAIL | A logged out visitor cannot onboard a school (it was allowed)\n';
   exception when insufficient_privilege then
     report := report || E'PASS | A logged out visitor cannot onboard a school\n';
@@ -356,6 +345,12 @@ begin
   end;
   select public.rotate_license_secret(sid) into sec2;
   report := report || format(E'%s | rotating gives a different secret | different: %s\n', case when sec1 <> sec2 and length(sec2) = 64 then 'PASS' else 'FAIL' end, (sec1 <> sec2));
+  -- A fresh school starts with a one year expiry, but generate_license_key
+  -- only issues a key inside the reminder window. Move this one school's
+  -- expiry near, as it would genuinely be by the time an admin does this.
+  reset role;
+  update public.subscriptions set license_expires_on = current_date + 10 where school_id = sid;
+  set local role authenticated;
   select public.generate_license_key(sid) ->> 'key' into t;
   report := report || format(E'%s | a key is issued in the 20 character format | got %s\n', case when t ~ '^[0-9A-F]{4}(-[0-9A-F]{4}){4}$' then 'PASS' else 'FAIL' end, t);
   n := (select count(*) from public.license_keys where school_id = sid);
@@ -480,7 +475,7 @@ begin
   n := (select count(*) from public.tpi_staff where user_id = own1);
   report := report || format(E'%s | with the switch on, that login can still read its own staff row (to enrol) | expected 1, got %s\n', case when n = 1 then 'PASS' else 'FAIL' end, n);
   begin
-    perform public.create_school(r2, 'Test School', 'Head', 'head@example.com', '+264', url2, key2, 'af-south-1', 'standard', 'annual', 12000, current_date + 30);
+    perform public.create_school(r2, 'Test School', 'Head', 'head@example.com', '+264', url2, key2, 'af-south-1', 'standard', 'annual', 12000);
     report := report || E'FAIL | with the switch on, a first factor only login cannot onboard (it was allowed)\n';
   exception when insufficient_privilege then
     report := report || E'PASS | with the switch on, a first factor only login cannot onboard\n';

@@ -10,6 +10,7 @@ import { FormField, FieldInput, FieldSelect, FieldTextarea } from '@/components/
 import { ErrorBanner } from '@/components/ui/ErrorBanner'
 import { StatusBadge } from '@/components/ui/Badge'
 import { useToast } from '@/components/ui/Toast'
+import { errorMessage } from '@/lib/errorMessage'
 
 const STATUSES = ['pending', 'active', 'suspended', 'offboarded']
 
@@ -41,7 +42,7 @@ export function OverviewTab({
       const result = await testAddress(address)
       setTestResult(result)
     } catch (e) {
-      setTestError(e instanceof Error ? e.message : String(e))
+      setTestError(errorMessage(e))
       setTestResult(null)
     }
   }
@@ -223,7 +224,7 @@ function EditConnectionForm({
       await updateSchoolProject(schoolId, url, trimmed, region)
       await onSaved()
     } catch (e) {
-      setError(e instanceof Error ? e.message : String(e))
+      setError(errorMessage(e))
     } finally {
       setBusy(false)
     }

@@ -3,10 +3,11 @@ import { Modal } from '@/components/ui/Modal'
 import { Button } from '@/components/ui/Button'
 import { ErrorBanner } from '@/components/ui/ErrorBanner'
 import { FormField, FieldInput, FieldSelect } from '@/components/ui/FormField'
-import { createSchool, setChecklistStep } from '@/lib/data/schools'
+import { createSchool, setChecklistStep, type CreateSchoolResult } from '@/lib/data/schools'
 import { getPlatformSettings } from '@/lib/data/settings'
 import { schoolAddress } from '@/lib/constants'
 import { useAuth } from '@/contexts/AuthContext'
+import { errorMessage } from '@/lib/errorMessage'
 
 const BLOCKED_KEY_PREFIXES = ['sb_secret_', 'eyJ']
 
@@ -22,7 +23,6 @@ const initialForm = {
   plan: 'standard',
   billingCycle: 'annual',
   price: '',
-  expiresOn: '',
 }
 
 export function OnboardWizard({
@@ -39,6 +39,7 @@ export function OnboardWizard({
   const [form, setForm] = useState(initialForm)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
+  const [result, setResult] = useState<CreateSchoolResult | null>(null)
 
   useEffect(() => {
     if (open) {
@@ -48,6 +49,7 @@ export function OnboardWizard({
     } else {
       setForm(initialForm)
       setError('')
+      setResult(null)
     }
   }, [open])
 
@@ -67,7 +69,7 @@ export function OnboardWizard({
 
     setBusy(true)
     try {
-      const result = await createSchool({
+      const created = await createSchool({
         code: form.code,
         name: form.name,
         contactName: form.contactName,
@@ -79,18 +81,35 @@ export function OnboardWizard({
         plan: form.plan,
         billingCycle: form.billingCycle,
         price: Number(form.price),
-        expiresOn: form.expiresOn,
       })
-      await setChecklistStep(result.school_id, 'registered_in_tpic', staff?.full_name ?? 'TPIC')
-      onCreated(result.school_id)
+      await setChecklistStep(created.school_id, 'registered_in_tpic', staff?.full_name ?? 'TPIC')
+      setResult(created)
     } catch (e) {
-      setError(e instanceof Error ? e.message : String(e))
+      setError(errorMessage(e))
     } finally {
       setBusy(false)
     }
   }
 
   const address = form.code ? schoolAddress(form.code, platformDomain || 'edulink.live') : ''
+
+  if (result) {
+    return (
+      <Modal open={open} onClose={onClose} title="School created" maxWidth="max-w-xl">
+        <div className="space-y-4">
+          <p className="text-sm text-ink">
+            <span className="font-700">{form.name}</span> was created at <span className="font-mono">{result.hostname}</span>.
+          </p>
+          <p className="text-sm text-ink">
+            License expires on <span className="font-700">{result.license_expires_on}</span>.
+          </p>
+          <div className="flex justify-end">
+            <Button onClick={() => onCreated(result.school_id)}>Open school</Button>
+          </div>
+        </div>
+      </Modal>
+    )
+  }
 
   return (
     <Modal open={open} onClose={onClose} title="Onboard a school" maxWidth="max-w-xl">
@@ -157,14 +176,14 @@ export function OnboardWizard({
             <FieldInput required value={form.plan} onChange={(e) => set('plan', e.target.value)} />
           </FormField>
         </div>
-        <div className="grid grid-cols-3 gap-4">
+        <div className="grid grid-cols-2 gap-4">
           <FormField label="Billing cycle">
             <FieldSelect value={form.billingCycle} onChange={(e) => set('billingCycle', e.target.value)}>
               <option value="monthly">Monthly</option>
               <option value="annual">Annual</option>
             </FieldSelect>
           </FormField>
-          <FormField label="Price">
+          <FormField label="Price" hint="The first license period is set automatically to one year from today.">
             <FieldInput
               type="number"
               step="0.01"
@@ -172,14 +191,6 @@ export function OnboardWizard({
               required
               value={form.price}
               onChange={(e) => set('price', e.target.value)}
-            />
-          </FormField>
-          <FormField label="First expiry">
-            <FieldInput
-              type="date"
-              required
-              value={form.expiresOn}
-              onChange={(e) => set('expiresOn', e.target.value)}
             />
           </FormField>
         </div>

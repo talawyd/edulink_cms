@@ -10,6 +10,7 @@ import { ErrorBanner } from '@/components/ui/ErrorBanner'
 import { PageSpinner } from '@/components/ui/Spinner'
 import { FieldSelect } from '@/components/ui/FormField'
 import { OnboardWizard } from '@/components/schools/OnboardWizard'
+import { errorMessage } from '@/lib/errorMessage'
 
 function daysLeft(dateStr: string | null) {
   if (!dateStr) return null
@@ -31,7 +32,7 @@ export default function SchoolsPage() {
       setRows(await listSchools())
       setError('')
     } catch (e) {
-      setError(e instanceof Error ? e.message : String(e))
+      setError(errorMessage(e))
     } finally {
       setLoading(false)
     }

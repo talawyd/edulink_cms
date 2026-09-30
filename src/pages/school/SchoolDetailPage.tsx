@@ -13,6 +13,7 @@ import { OverviewTab } from './OverviewTab'
 import { ChecklistTab } from './ChecklistTab'
 import { RunbookTab } from './RunbookTab'
 import { ActivityTab } from './ActivityTab'
+import { errorMessage } from '@/lib/errorMessage'
 
 type TabKey = 'overview' | 'checklist' | 'runbook' | 'activity'
 
@@ -29,7 +30,7 @@ export default function SchoolDetailPage() {
       setDetail(await getSchool(id))
       setError('')
     } catch (e) {
-      setError(e instanceof Error ? e.message : String(e))
+      setError(errorMessage(e))
     }
   }, [id])
 
