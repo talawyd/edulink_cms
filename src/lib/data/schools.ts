@@ -6,6 +6,12 @@ export type SchoolListRow = Tables<'schools'> & {
   school_domains: Pick<Tables<'school_domains'>, 'hostname' | 'is_primary'>[]
 }
 
+export async function listSchoolOptions(): Promise<Pick<Tables<'schools'>, 'id' | 'name' | 'code'>[]> {
+  const { data, error } = await supabase.from('schools').select('id, name, code').order('name')
+  if (error) throw error
+  return data
+}
+
 export async function listSchools(): Promise<SchoolListRow[]> {
   const { data, error } = await supabase
     .from('schools')

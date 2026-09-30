@@ -10,8 +10,10 @@ import NotOnTeamPage from '@/pages/NotOnTeamPage'
 import SecurityPage from '@/pages/SecurityPage'
 import SchoolsPage from '@/pages/SchoolsPage'
 import RenewalsPage from '@/pages/RenewalsPage'
+import TeamPage from '@/pages/TeamPage'
+import SettingsPage from '@/pages/SettingsPage'
+import ActivityPage from '@/pages/ActivityPage'
 import SchoolDetailPage from '@/pages/school/SchoolDetailPage'
-import NotBuiltPage from '@/pages/NotBuiltPage'
 
 function Gate({ children }: { children: ReactNode }) {
   const { loading, session, mfaRequired, staff, notOnTeam } = useAuth()
@@ -35,9 +37,9 @@ export default function App() {
                 <Route path="/schools" element={<SchoolsPage />} />
                 <Route path="/schools/:id" element={<SchoolDetailPage />} />
                 <Route path="/renewals" element={<RenewalsPage />} />
-                <Route path="/team" element={<NotBuiltPage title="Team" />} />
-                <Route path="/settings" element={<NotBuiltPage title="Settings" />} />
-                <Route path="/activity" element={<NotBuiltPage title="Activity" />} />
+                <Route path="/team" element={<TeamPage />} />
+                <Route path="/settings" element={<SettingsPage />} />
+                <Route path="/activity" element={<ActivityPage />} />
                 <Route path="/security" element={<SecurityPage />} />
                 <Route path="*" element={<Navigate to="/schools" replace />} />
               </Route>

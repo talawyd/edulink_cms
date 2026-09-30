@@ -5,3 +5,8 @@ export async function getPlatformSettings() {
   if (error) throw error
   return data
 }
+
+export async function updatePlatformSettings(fields: { default_grace_days?: number; require_mfa?: boolean }) {
+  const { error } = await supabase.from('platform_settings').update(fields).eq('id', true)
+  if (error) throw error
+}
