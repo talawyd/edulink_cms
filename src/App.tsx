@@ -8,6 +8,8 @@ import LoginPage from '@/pages/LoginPage'
 import MfaPromptPage from '@/pages/MfaPromptPage'
 import NotOnTeamPage from '@/pages/NotOnTeamPage'
 import SecurityPage from '@/pages/SecurityPage'
+import SchoolsPage from '@/pages/SchoolsPage'
+import SchoolDetailPage from '@/pages/school/SchoolDetailPage'
 import NotBuiltPage from '@/pages/NotBuiltPage'
 
 function Gate({ children }: { children: ReactNode }) {
@@ -29,7 +31,8 @@ export default function App() {
             <Routes>
               <Route element={<AppShell />}>
                 <Route path="/" element={<Navigate to="/schools" replace />} />
-                <Route path="/schools" element={<NotBuiltPage title="Schools" />} />
+                <Route path="/schools" element={<SchoolsPage />} />
+                <Route path="/schools/:id" element={<SchoolDetailPage />} />
                 <Route path="/renewals" element={<NotBuiltPage title="Renewals" />} />
                 <Route path="/team" element={<NotBuiltPage title="Team" />} />
                 <Route path="/settings" element={<NotBuiltPage title="Settings" />} />
