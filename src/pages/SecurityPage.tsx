@@ -123,7 +123,7 @@ export default function SecurityPage() {
         <div className="bg-surface border border-border rounded-2xl p-6 space-y-4">
           <p className="text-sm font-700">Scan this QR code with your authenticator app</p>
           <div
-            className="w-40 h-40 bg-white p-2 rounded-lg border border-border"
+            className="w-40 h-40 bg-white p-2 rounded-lg border border-border [&_svg]:w-full [&_svg]:h-full [&_svg]:block"
             dangerouslySetInnerHTML={{ __html: enrolling.qrCode }}
           />
           <div>
