@@ -298,6 +298,7 @@ export type Database = {
           anon_key: string
           created_at: string
           id: string
+          kind: string
           region: string
           schema_version: string | null
           school_id: string
@@ -310,6 +311,7 @@ export type Database = {
           anon_key: string
           created_at?: string
           id?: string
+          kind?: string
           region?: string
           schema_version?: string | null
           school_id: string
@@ -322,6 +324,7 @@ export type Database = {
           anon_key?: string
           created_at?: string
           id?: string
+          kind?: string
           region?: string
           schema_version?: string | null
           school_id?: string
@@ -350,6 +353,8 @@ export type Database = {
           id: string
           name: string
           plan: string
+          school_type: string | null
+          size_tier: string | null
           status: string
         }
         Insert: {
@@ -361,6 +366,8 @@ export type Database = {
           id?: string
           name: string
           plan?: string
+          school_type?: string | null
+          size_tier?: string | null
           status?: string
         }
         Update: {
@@ -372,6 +379,8 @@ export type Database = {
           id?: string
           name?: string
           plan?: string
+          school_type?: string | null
+          size_tier?: string | null
           status?: string
         }
         Relationships: []
@@ -513,12 +522,22 @@ export type Database = {
         Returns: {
           anon_key: string
           school_code: string
+          school_id: string
           school_name: string
           status: string
           supabase_url: string
         }[]
       }
       rotate_license_secret: { Args: { p_school_id: string }; Returns: string }
+      set_school_profile: {
+        Args: {
+          p_hosting: string
+          p_school_id: string
+          p_tier: string
+          p_type: string
+        }
+        Returns: undefined
+      }
       set_school_status: {
         Args: { p_reason?: string; p_school_id: string; p_status: string }
         Returns: undefined

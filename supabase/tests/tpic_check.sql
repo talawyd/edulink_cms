@@ -17,7 +17,7 @@ declare
   url1 text; url2 text;
   key1 text := 'sb_publishable_' || substr(md5(random()::text) || md5(random()::text), 1, 30);
   key2 text := 'sb_publishable_' || substr(md5(random()::text) || md5(random()::text), 1, 30);
-  sid uuid; sec1 text; sec2 text; newbie_email text;
+  sid uuid; sec1 text; sec2 text; newbie_email text; v uuid; v2 uuid;
 begin
   url1 := 'https://' || ref1 || '.supabase.co';
   url2 := 'https://' || ref2 || '.supabase.co';
@@ -181,12 +181,6 @@ begin
     report := report || E'FAIL | A duplicate school code is refused (it was allowed)\n';
   exception when others then
     report := report || E'PASS | A duplicate school code is refused\n';
-  end;
-  begin
-    perform public.create_school(r2, 'Test School', 'Head', 'head@example.com', '+264', url1, key2, 'af-south-1', 'standard', 'annual', 12000);
-    report := report || E'FAIL | A duplicate project is refused, even with a new code (it was allowed)\n';
-  exception when others then
-    report := report || E'PASS | A duplicate project is refused, even with a new code\n';
   end;
   n := ((select count(*) from public.schools) - n);
   report := report || format(E'%s | none of the refused attempts left a school behind | expected 0, got %s\n', case when n = 0 then 'PASS' else 'FAIL' end, n);
@@ -500,6 +494,68 @@ begin
     reset role;
     set local role authenticated;
   end;
+
+  -- K. POOLED HOSTING (many schools on one project)
+  report := report || E'---- K. POOLED HOSTING (many schools on one project)\n';
+  begin
+    set local role authenticated;
+    perform set_config('request.jwt.claim.sub', own1::text, true);
+    perform set_config('request.jwt.claims', json_build_object('sub', own1, 'role', 'authenticated', 'aal', 'aal1')::text, true);
+
+    select public.create_school('zs' || tag, 'Second School', 'Head', 'head2@example.com', '+264', url2, key2, 'af-south-1', 'standard', 'annual', 9000) into res;
+    v := (res->>'school_id')::uuid;
+    n := (select count(*) from public.school_projects where supabase_project_ref = ref2);
+    report := report || format(E'%s | two schools can now share one pooled project | expected 2, got %s\n', case when n = 2 then 'PASS' else 'FAIL' end, n);
+
+    select count(distinct school_id) into n from public.resolve_school_by_hostname('zs' || tag || '.edulink.live') where supabase_url = url2;
+    report := report || format(E'%s | the lookup returns the school and the shared project | expected 1, got %s\n', case when n = 1 then 'PASS' else 'FAIL' end, n);
+    select school_id into v2 from public.resolve_school_by_hostname(c1 || '.edulink.live');
+    select school_id into sec1 from public.resolve_school_by_hostname('zs' || tag || '.edulink.live');
+    report := report || format(E'%s | the lookup returns each school its OWN id even on a shared project | first %s, second %s\n',
+      case when v2 = sid and sec1::uuid = v and v2 <> sec1::uuid then 'PASS' else 'FAIL' end, left(v2::text, 8), left(sec1, 8));
+
+    begin
+      perform public.set_school_profile(v, 'private', 'small', 'dedicated');
+      report := report || E'FAIL | a school cannot become dedicated while others share its project (it was allowed)\n';
+    exception when raise_exception then
+      report := report || E'PASS | a school cannot become dedicated while others share its project\n';
+    end;
+
+    perform public.set_school_profile(v, 'private', 'small', 'pooled');
+    n := (select count(*) from public.schools where id = v and school_type = 'private' and size_tier = 'small');
+    report := report || format(E'%s | a school profile (type and size) is saved | expected 1, got %s\n', case when n = 1 then 'PASS' else 'FAIL' end, n);
+
+    begin
+      perform public.set_school_profile(v, 'banana', 'small', 'pooled');
+      report := report || E'FAIL | an invalid school type was accepted\n';
+    exception when raise_exception then
+      report := report || E'PASS | an invalid school type is refused\n';
+    end;
+
+    t := 'https://' || substr(md5(random()::text), 1, 20) || '.supabase.co';
+    select public.create_school('zd' || tag, 'Dedicated School', 'Head', 'head3@example.com', '+264', t, key2, 'af-south-1', 'standard', 'annual', 9000) into res;
+    perform public.set_school_profile((res->>'school_id')::uuid, 'public', 'large', 'dedicated');
+    n := (select count(*) from public.school_projects where school_id = (res->>'school_id')::uuid and kind = 'dedicated');
+    report := report || format(E'%s | a school on its own project can be made dedicated | expected 1, got %s\n', case when n = 1 then 'PASS' else 'FAIL' end, n);
+    begin
+      perform public.create_school('ze' || tag, 'Intruder School', 'Head', 'head4@example.com', '+264', t, key2, 'af-south-1', 'standard', 'annual', 9000);
+      report := report || E'FAIL | a second school was allowed onto a dedicated project\n';
+    exception when raise_exception then
+      report := report || E'PASS | a second school cannot join a dedicated project\n';
+    end;
+    set local role anon;
+    begin
+      perform public.set_school_profile(v, 'private', 'small', 'pooled');
+      report := report || E'FAIL | a logged out visitor changed a school profile\n';
+    exception when insufficient_privilege then
+      report := report || E'PASS | a logged out visitor cannot change a school profile\n';
+    end;
+    set local role authenticated;
+  exception when others then
+    report := report || format(E'FAIL | section crashed and could not finish | %s\n', sqlerrm);
+  end;
+  reset role;
+
   fails := array_length(regexp_split_to_array(report, 'FAIL'), 1) - 1;
   raise exception E'\n\nTPIC TEST REPORT (this error is intentional; it rolls back all test data)\n\nRESULT: % failed\n\n%\n', fails, report;
 end;
