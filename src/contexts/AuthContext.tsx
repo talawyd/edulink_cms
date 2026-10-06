@@ -11,6 +11,7 @@ type AuthState = {
   mfaRequired: boolean
   staff: Staff | null
   notOnTeam: boolean
+  staffCheckError: string | null
   refreshMfaStatus: () => Promise<void>
   refreshStaff: () => Promise<void>
   signOut: () => Promise<void>
@@ -24,6 +25,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [mfaRequired, setMfaRequired] = useState(false)
   const [staff, setStaff] = useState<Staff | null>(null)
   const [notOnTeam, setNotOnTeam] = useState(false)
+  const [staffCheckError, setStaffCheckError] = useState<string | null>(null)
 
   async function checkMfa() {
     const { data, error } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel()
@@ -36,26 +38,48 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return required
   }
 
+  // A FAILED check (thrown exception, network error, Supabase error) must
+  // never be treated the same as a check that completed and genuinely found
+  // no membership. Only the latter signs the person out. The former leaves
+  // their session alone and surfaces staffCheckError instead, so a transient
+  // outage (e.g. a Supabase API gateway incident) can't look like a real
+  // access revocation.
   async function loadStaff() {
-    const { data } = await supabase.auth.getUser()
-    if (!data.user) {
-      setStaff(null)
-      setNotOnTeam(true)
-      return
+    try {
+      const { data: userData, error: userError } = await supabase.auth.getUser()
+      if (userError) {
+        setStaffCheckError(userError.message)
+        return
+      }
+      if (!userData.user) {
+        // No error, but genuinely no user on a session that exists: treat
+        // as a confirmed empty result, not a failure.
+        setStaff(null)
+        setNotOnTeam(true)
+        setStaffCheckError(null)
+        return
+      }
+      const { data: row, error: staffError } = await supabase
+        .from('tpi_staff')
+        .select('*')
+        .eq('user_id', userData.user.id)
+        .maybeSingle()
+      if (staffError) {
+        setStaffCheckError(staffError.message)
+        return
+      }
+      setStaffCheckError(null)
+      if (!row || !row.active) {
+        setStaff(null)
+        setNotOnTeam(true)
+        await supabase.auth.signOut()
+        return
+      }
+      setStaff(row)
+      setNotOnTeam(false)
+    } catch (e) {
+      setStaffCheckError(e instanceof Error ? e.message : String(e))
     }
-    const { data: row } = await supabase
-      .from('tpi_staff')
-      .select('*')
-      .eq('user_id', data.user.id)
-      .maybeSingle()
-    if (!row || !row.active) {
-      setStaff(null)
-      setNotOnTeam(true)
-      await supabase.auth.signOut()
-      return
-    }
-    setStaff(row)
-    setNotOnTeam(false)
   }
 
   // Runs the full membership + MFA check. Called exactly once per session:
@@ -66,6 +90,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setSession(nextSession)
     setStaff(null)
     setNotOnTeam(false)
+    setStaffCheckError(null)
     if (!nextSession) {
       setMfaRequired(false)
       setLoading(false)
@@ -97,6 +122,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setStaff(null)
         setNotOnTeam(false)
         setMfaRequired(false)
+        setStaffCheckError(null)
         setLoading(false)
         return
       }
@@ -119,7 +145,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   return (
     <AuthContext.Provider
-      value={{ loading, session, mfaRequired, staff, notOnTeam, refreshMfaStatus, refreshStaff: loadStaff, signOut }}
+      value={{
+        loading,
+        session,
+        mfaRequired,
+        staff,
+        notOnTeam,
+        staffCheckError,
+        refreshMfaStatus,
+        refreshStaff: loadStaff,
+        signOut,
+      }}
     >
       {children}
     </AuthContext.Provider>
