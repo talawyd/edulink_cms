@@ -2,6 +2,7 @@ import { useState, type FormEvent } from 'react'
 import { ExternalLink, RefreshCw } from 'lucide-react'
 import type { SchoolDetail } from '@/lib/data/schools'
 import { updateSchoolProject, setSchoolStatus, testAddress, type ResolvedSchool } from '@/lib/data/schools'
+import { attachDedicatedProject } from '@/lib/data/hostingPools'
 import { supabaseDashboardLinks, schoolAddress } from '@/lib/constants'
 import { Button } from '@/components/ui/Button'
 import { LinkButton } from '@/components/ui/LinkButton'
@@ -79,14 +80,14 @@ export function OverviewTab({
         </div>
       </div>
 
-      <div className="bg-surface border border-border rounded-2xl p-6">
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="font-display font-700">Connection</h3>
-          <Button size="sm" variant="secondary" onClick={() => setEditOpen(true)}>
-            Edit connection
-          </Button>
-        </div>
-        {project ? (
+      {project ? (
+        <div className="bg-surface border border-border rounded-2xl p-6">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="font-display font-700">Connection</h3>
+            <Button size="sm" variant="secondary" onClick={() => setEditOpen(true)}>
+              Edit connection
+            </Button>
+          </div>
           <div className="grid grid-cols-2 gap-x-6 gap-y-3 text-sm">
             <div>
               <p className="text-xs text-muted">Project URL</p>
@@ -101,23 +102,36 @@ export function OverviewTab({
               <p className="font-mono">{project.anon_key.slice(0, 15)}…</p>
             </div>
           </div>
-        ) : (
-          <p className="text-sm text-muted">No connection on file.</p>
-        )}
-        {links && (
-          <div className="flex flex-wrap gap-2 mt-4">
-            <LinkButton href={links.users} target="_blank" rel="noreferrer">
-              Users <ExternalLink className="h-3.5 w-3.5" />
-            </LinkButton>
-            <LinkButton href={links.sqlEditor} target="_blank" rel="noreferrer">
-              SQL editor <ExternalLink className="h-3.5 w-3.5" />
-            </LinkButton>
-            <LinkButton href={links.apiKeys} target="_blank" rel="noreferrer">
-              API keys <ExternalLink className="h-3.5 w-3.5" />
-            </LinkButton>
-          </div>
-        )}
-      </div>
+          {links && (
+            <div className="flex flex-wrap gap-2 mt-4">
+              <LinkButton href={links.users} target="_blank" rel="noreferrer">
+                Users <ExternalLink className="h-3.5 w-3.5" />
+              </LinkButton>
+              <LinkButton href={links.sqlEditor} target="_blank" rel="noreferrer">
+                SQL editor <ExternalLink className="h-3.5 w-3.5" />
+              </LinkButton>
+              <LinkButton href={links.apiKeys} target="_blank" rel="noreferrer">
+                API keys <ExternalLink className="h-3.5 w-3.5" />
+              </LinkButton>
+            </div>
+          )}
+        </div>
+      ) : (
+        <div className="bg-warning-muted border border-warning/30 rounded-2xl p-6">
+          <h3 className="font-display font-700 text-warning mb-1">Awaiting its own Supabase project</h3>
+          <p className="text-sm text-ink/80 mb-4">
+            This school was onboarded as dedicated hosting, but no project is attached yet. Create that project,
+            then paste its details here.
+          </p>
+          <AttachProjectForm
+            schoolId={school.id}
+            onAttached={async () => {
+              await onReload()
+              toast('success', 'Project attached.')
+            }}
+          />
+        </div>
+      )}
 
       <div className="bg-surface border border-border rounded-2xl p-6">
         <div className="flex items-center justify-between mb-3">
@@ -243,6 +257,53 @@ function EditConnectionForm({
       <div className="flex justify-end">
         <Button type="submit" loading={busy}>
           Save
+        </Button>
+      </div>
+    </form>
+  )
+}
+
+function AttachProjectForm({ schoolId, onAttached }: { schoolId: string; onAttached: () => Promise<void> }) {
+  const [url, setUrl] = useState('')
+  const [key, setKey] = useState('')
+  const [region, setRegion] = useState('')
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState('')
+
+  async function handleSubmit(e: FormEvent) {
+    e.preventDefault()
+    const trimmed = key.trim()
+    if (trimmed.startsWith('sb_secret_') || trimmed.startsWith('eyJ')) {
+      setError('That looks like a secret key. Only the publishable key goes here.')
+      return
+    }
+    setBusy(true)
+    setError('')
+    try {
+      await attachDedicatedProject(schoolId, url, trimmed, region)
+      await onAttached()
+    } catch (e) {
+      setError(errorMessage(e))
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-4">
+      <FormField label="Project URL">
+        <FieldInput type="url" required placeholder="https://xxxxx.supabase.co" value={url} onChange={(e) => setUrl(e.target.value)} />
+      </FormField>
+      <FormField label="Publishable key" hint="Only the publishable key (starts sb_publishable_) goes here.">
+        <FieldInput required placeholder="sb_publishable_..." value={key} onChange={(e) => setKey(e.target.value)} />
+      </FormField>
+      <FormField label="Region">
+        <FieldInput required value={region} onChange={(e) => setRegion(e.target.value)} />
+      </FormField>
+      {error && <ErrorBanner message={error} />}
+      <div className="flex justify-end">
+        <Button type="submit" loading={busy}>
+          Attach project
         </Button>
       </div>
     </form>
