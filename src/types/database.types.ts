@@ -14,6 +14,33 @@ export type Database = {
   }
   public: {
     Tables: {
+      hosting_pools: {
+        Row: {
+          anon_key: string
+          created_at: string
+          id: string
+          kind: string
+          label: string
+          supabase_url: string
+        }
+        Insert: {
+          anon_key: string
+          created_at?: string
+          id?: string
+          kind: string
+          label: string
+          supabase_url: string
+        }
+        Update: {
+          anon_key?: string
+          created_at?: string
+          id?: string
+          kind?: string
+          label?: string
+          supabase_url?: string
+        }
+        Relationships: []
+      }
       invoices: {
         Row: {
           amount: number
@@ -515,6 +542,10 @@ export type Database = {
       }
       mark_license_key_sent: {
         Args: { p_key_row: string; p_sent_to: string }
+        Returns: undefined
+      }
+      register_hosting_pool: {
+        Args: { p_key: string; p_kind: string; p_label: string; p_url: string }
         Returns: undefined
       }
       resolve_school_by_hostname: {

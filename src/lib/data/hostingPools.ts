@@ -1,18 +1,27 @@
 import { supabase } from '@/lib/supabase'
 
 // TODO: drop these never-casts once database.types.ts is regenerated against
-// migration 0009 (hosting_pools table, create_school_shared,
-// create_school_dedicated, attach_dedicated_project) — none of it is in the
-// checked-in types yet.
+// migration 0009 (create_school_shared, create_school_dedicated,
+// attach_dedicated_project) — not in the checked-in types yet. hosting_pools
+// and register_hosting_pool are now typed for real, below.
 
-export type HostingPool = { id: string; label: string; kind: 'private' | 'public' }
+export type HostingPool = { id: string; label: string; kind: 'private' | 'public'; supabase_url: string }
 
 export async function listHostingPools(): Promise<HostingPool[]> {
-  const { data, error } = await (supabase.from('hosting_pools' as never) as any)
-    .select('id, label, kind')
-    .order('label')
+  const { data, error } = await supabase.from('hosting_pools').select('id, label, kind, supabase_url').order('label')
   if (error) throw error
   return data as HostingPool[]
+}
+
+export async function canManageHostingPools() {
+  const { data, error } = await supabase.rpc('has_tpi_role', { p_roles: ['owner', 'engineer'] })
+  if (error) throw error
+  return data
+}
+
+export async function registerHostingPool(label: string, kind: string, url: string, key: string) {
+  const { error } = await supabase.rpc('register_hosting_pool', { p_label: label, p_kind: kind, p_url: url, p_key: key })
+  if (error) throw error
 }
 
 export type CreateSchoolSharedInput = {

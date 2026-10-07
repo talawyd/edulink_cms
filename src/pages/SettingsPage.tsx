@@ -2,11 +2,14 @@ import { useEffect, useState, type FormEvent } from 'react'
 import { motion } from 'framer-motion'
 import type { Tables } from '@/types/database.types'
 import { getPlatformSettings, updatePlatformSettings } from '@/lib/data/settings'
+import { canManageHostingPools, listHostingPools, registerHostingPool, type HostingPool } from '@/lib/data/hostingPools'
 import { Button } from '@/components/ui/Button'
 import { Modal } from '@/components/ui/Modal'
-import { FormField, FieldInput } from '@/components/ui/FormField'
+import { FormField, FieldInput, FieldSelect } from '@/components/ui/FormField'
 import { ErrorBanner } from '@/components/ui/ErrorBanner'
 import { PageSpinner } from '@/components/ui/Spinner'
+import { Table, type Column } from '@/components/ui/Table'
+import { Badge } from '@/components/ui/Badge'
 import { useToast } from '@/components/ui/Toast'
 import { errorMessage } from '@/lib/errorMessage'
 
@@ -24,6 +27,8 @@ export default function SettingsPage() {
   const [mfaConfirmOpen, setMfaConfirmOpen] = useState(false)
   const [mfaBusy, setMfaBusy] = useState(false)
 
+  const [canManagePools, setCanManagePools] = useState(false)
+
   async function load() {
     try {
       const s = await getPlatformSettings()
@@ -37,6 +42,7 @@ export default function SettingsPage() {
 
   useEffect(() => {
     load()
+    canManageHostingPools().then(setCanManagePools).catch(() => setCanManagePools(false))
   }, [])
 
   async function handleSaveGrace(e: FormEvent) {
@@ -135,6 +141,8 @@ export default function SettingsPage() {
         </div>
       </div>
 
+      {canManagePools && <HostingPoolsCard />}
+
       <MfaConfirmModal
         open={mfaConfirmOpen}
         busy={mfaBusy}
@@ -202,5 +210,97 @@ function MfaConfirmModal({
         </div>
       </div>
     </Modal>
+  )
+}
+
+function HostingPoolsCard() {
+  const toast = useToast()
+  const [pools, setPools] = useState<HostingPool[] | null>(null)
+  const [listError, setListError] = useState('')
+
+  const [label, setLabel] = useState('')
+  const [kind, setKind] = useState('private')
+  const [url, setUrl] = useState('')
+  const [key, setKey] = useState('')
+  const [busy, setBusy] = useState(false)
+  const [formError, setFormError] = useState('')
+
+  async function load() {
+    try {
+      setPools(await listHostingPools())
+      setListError('')
+    } catch (e) {
+      setListError(errorMessage(e))
+    }
+  }
+
+  useEffect(() => {
+    load()
+  }, [])
+
+  async function handleSubmit(e: FormEvent) {
+    e.preventDefault()
+    setBusy(true)
+    setFormError('')
+    try {
+      await registerHostingPool(label, kind, url, key)
+      setLabel('')
+      setKind('private')
+      setUrl('')
+      setKey('')
+      await load()
+      toast('success', 'Hosting pool registered.')
+    } catch (e) {
+      setFormError(errorMessage(e))
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  const columns: Column<HostingPool>[] = [
+    { header: 'Label', render: (r) => <span className="font-700">{r.label}</span> },
+    { header: 'Kind', render: (r) => <Badge color="primary">{r.kind}</Badge> },
+    { header: 'URL', render: (r) => <span className="font-mono text-xs">{r.supabase_url}</span> },
+  ]
+
+  return (
+    <div className="bg-surface border border-border rounded-2xl p-6">
+      <h3 className="font-display font-700 mb-1">Hosting pools</h3>
+      <p className="text-sm text-muted mb-4">
+        Shared Supabase projects a school can be onboarded onto during pooled setup.
+      </p>
+
+      <form onSubmit={handleSubmit} className="space-y-3 mb-6">
+        <div className="grid grid-cols-2 gap-3">
+          <FormField label="Label">
+            <FieldInput value={label} onChange={(e) => setLabel(e.target.value)} required />
+          </FormField>
+          <FormField label="Kind">
+            <FieldSelect value={kind} onChange={(e) => setKind(e.target.value)}>
+              <option value="private">private</option>
+              <option value="public">public</option>
+            </FieldSelect>
+          </FormField>
+        </div>
+        <FormField label="Supabase project URL">
+          <FieldInput
+            value={url}
+            onChange={(e) => setUrl(e.target.value)}
+            placeholder="https://xxxxxxxxxxxxxxxxxxxx.supabase.co"
+            required
+          />
+        </FormField>
+        <FormField label="Publishable key">
+          <FieldInput value={key} onChange={(e) => setKey(e.target.value)} required />
+        </FormField>
+        {formError && <ErrorBanner message={formError} />}
+        <Button type="submit" size="sm" loading={busy}>
+          Register pool
+        </Button>
+      </form>
+
+      {listError && <ErrorBanner message={listError} />}
+      {!pools ? <PageSpinner /> : <Table rows={pools} columns={columns} emptyTitle="No hosting pools registered yet" />}
+    </div>
   )
 }
