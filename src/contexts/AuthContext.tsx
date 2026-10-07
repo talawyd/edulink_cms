@@ -70,9 +70,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
       setStaffCheckError(null)
       if (!row || !row.active) {
+        // Confirmed no membership. This never signs the person out on its
+        // own — only a click on an actual Sign out button ends a session.
+        // NotOnTeamPage shows that button instead.
         setStaff(null)
         setNotOnTeam(true)
-        await supabase.auth.signOut()
         return
       }
       setStaff(row)
