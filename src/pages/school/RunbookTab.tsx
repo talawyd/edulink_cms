@@ -84,7 +84,7 @@ export function RunbookTab({
   const [pwEmailError, setPwEmailError] = useState('')
   const [tempPassword, setTempPassword] = useState('')
 
-  const { staff } = useAuth()
+  const { session } = useAuth()
 
   function log(action: string) {
     logOperation(action, school.id).catch(() => {})
@@ -119,11 +119,11 @@ export function RunbookTab({
         {adminEmail && adminName && EMAIL_PATTERN.test(adminEmail) ? (
           <>
             <pre className="text-xs font-mono bg-bg border border-border rounded-lg p-3 overflow-x-auto whitespace-pre-wrap mb-3">
-              {firstAdminSql(adminEmail, adminName, staff?.full_name ?? 'TPIC')}
+              {firstAdminSql(adminEmail, adminName, session?.user.email ?? 'TPIC')}
             </pre>
             <div className="flex items-center gap-4">
               <CopyButton
-                value={firstAdminSql(adminEmail, adminName, staff?.full_name ?? 'TPIC')}
+                value={firstAdminSql(adminEmail, adminName, session?.user.email ?? 'TPIC')}
                 onCopy={() => log('runbook_first_admin_copied')}
               />
               {sqlEditorUrl && (

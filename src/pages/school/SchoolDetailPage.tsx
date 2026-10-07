@@ -49,11 +49,7 @@ export default function SchoolDetailPage() {
   const defaultGraceDays = settings?.default_grace_days ?? 30
 
   if (error) {
-    return (
-      <div className="p-6 md:p-8">
-        <ErrorBanner message={error} />
-      </div>
-    )
+    return <ErrorBanner message={error} />
   }
 
   if (!detail) return <PageSpinner />
@@ -63,7 +59,6 @@ export default function SchoolDetailPage() {
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.3, ease: 'easeOut' }}
-      className="p-6 md:p-8 max-w-4xl"
     >
       <Link to="/schools" className="inline-flex items-center gap-1.5 text-sm text-muted hover:text-ink mb-4">
         <ArrowLeft className="h-4 w-4" /> Schools

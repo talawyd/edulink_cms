@@ -6,8 +6,6 @@ import { PageSpinner } from '@/components/ui/Spinner'
 import { AppShell } from '@/components/layout/AppShell'
 import LoginPage from '@/pages/LoginPage'
 import MfaPromptPage from '@/pages/MfaPromptPage'
-import NotOnTeamPage from '@/pages/NotOnTeamPage'
-import StaffCheckErrorPage from '@/pages/StaffCheckErrorPage'
 import SecurityPage from '@/pages/SecurityPage'
 import SchoolsPage from '@/pages/SchoolsPage'
 import RenewalsPage from '@/pages/RenewalsPage'
@@ -17,15 +15,11 @@ import ActivityPage from '@/pages/ActivityPage'
 import SchoolDetailPage from '@/pages/school/SchoolDetailPage'
 
 function Gate({ children }: { children: ReactNode }) {
-  const { loading, session, mfaRequired, staff, notOnTeam, staffCheckError } = useAuth()
+  const { loading, session, mfaRequired } = useAuth()
 
   if (loading) return <PageSpinner />
   if (!session) return <LoginPage />
   if (mfaRequired) return <MfaPromptPage />
-  // A failed check (network/gateway error) is distinct from a completed
-  // check that found no membership — never fold these into one screen.
-  if (staffCheckError) return <StaffCheckErrorPage />
-  if (notOnTeam || !staff) return <NotOnTeamPage />
   return <>{children}</>
 }
 

@@ -42,7 +42,6 @@ export default function RenewalsPage() {
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.3, ease: 'easeOut' }}
-      className="p-6 md:p-8 max-w-4xl"
     >
       <h1 className="font-display font-800 text-2xl mb-1">Renewals</h1>
       <p className="text-muted text-sm mb-6">Schools whose license expires within the selected window.</p>

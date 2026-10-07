@@ -559,6 +559,10 @@ export type Database = {
           state: string
         }[]
       }
+      update_my_staff_name: {
+        Args: { p_full_name: string }
+        Returns: undefined
+      }
       update_school_project: {
         Args: {
           p_publishable_key: string

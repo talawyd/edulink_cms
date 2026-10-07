@@ -24,3 +24,8 @@ export async function setStaffActive(userId: string, active: boolean) {
   const { error } = await supabase.rpc('set_tpi_staff_active', { p_user_id: userId, p_active: active })
   if (error) throw error
 }
+
+export async function updateMyName(fullName: string) {
+  const { error } = await supabase.rpc('update_my_staff_name', { p_full_name: fullName })
+  if (error) throw error
+}

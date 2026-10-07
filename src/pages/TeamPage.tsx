@@ -1,8 +1,9 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { motion } from 'framer-motion'
-import { UserPlus } from 'lucide-react'
-import { listStaff, addStaff, setStaffActive, type StaffRow } from '@/lib/data/team'
+import { UserPlus, Pencil, Check, X } from 'lucide-react'
+import { listStaff, addStaff, setStaffActive, updateMyName, type StaffRow } from '@/lib/data/team'
 import { EMAIL_PATTERN } from '@/lib/runbook'
+import { useAuth } from '@/contexts/AuthContext'
 import { Table, type Column } from '@/components/ui/Table'
 import { Badge } from '@/components/ui/Badge'
 import { Button } from '@/components/ui/Button'
@@ -16,8 +17,65 @@ import { errorMessage } from '@/lib/errorMessage'
 
 const ROLES = ['owner', 'engineer', 'support']
 
+function MyNameCell({ row, onSaved }: { row: StaffRow; onSaved: () => Promise<void> }) {
+  const [editing, setEditing] = useState(false)
+  const [value, setValue] = useState(row.full_name)
+  const [busy, setBusy] = useState(false)
+  const toast = useToast()
+
+  if (!editing) {
+    return (
+      <span className="inline-flex items-center gap-2">
+        <span className="font-700">{row.full_name}</span>
+        <button
+          onClick={() => {
+            setValue(row.full_name)
+            setEditing(true)
+          }}
+          className="text-muted hover:text-ink"
+          aria-label="Edit your name"
+        >
+          <Pencil className="h-3.5 w-3.5" />
+        </button>
+      </span>
+    )
+  }
+
+  async function handleSave() {
+    setBusy(true)
+    try {
+      await updateMyName(value)
+      await onSaved()
+      setEditing(false)
+      toast('success', 'Name updated.')
+    } catch (e) {
+      toast('error', errorMessage(e))
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  return (
+    <span className="inline-flex items-center gap-1">
+      <FieldInput
+        autoFocus
+        value={value}
+        onChange={(e) => setValue(e.target.value)}
+        className="h-8 py-1"
+      />
+      <button onClick={handleSave} disabled={busy} className="text-success hover:opacity-80" aria-label="Save">
+        <Check className="h-4 w-4" />
+      </button>
+      <button onClick={() => setEditing(false)} disabled={busy} className="text-muted hover:text-ink" aria-label="Cancel">
+        <X className="h-4 w-4" />
+      </button>
+    </span>
+  )
+}
+
 export default function TeamPage() {
   const toast = useToast()
+  const { session } = useAuth()
   const [staff, setStaff] = useState<StaffRow[] | null>(null)
   const [error, setError] = useState('')
   const [addOpen, setAddOpen] = useState(false)
@@ -47,7 +105,15 @@ export default function TeamPage() {
   }
 
   const columns: Column<StaffRow>[] = [
-    { header: 'Name', render: (r) => <span className="font-700">{r.full_name}</span> },
+    {
+      header: 'Name',
+      render: (r) =>
+        r.user_id === session?.user.id ? (
+          <MyNameCell row={r} onSaved={load} />
+        ) : (
+          <span className="font-700">{r.full_name}</span>
+        ),
+    },
     { header: 'Email', render: (r) => r.email },
     { header: 'Role', render: (r) => <Badge color="primary">{r.role}</Badge> },
     { header: 'Status', render: (r) => <Badge color={r.active ? 'success' : 'muted'}>{r.active ? 'active' : 'inactive'}</Badge> },
@@ -75,7 +141,6 @@ export default function TeamPage() {
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.3, ease: 'easeOut' }}
-      className="p-6 md:p-8 max-w-4xl"
     >
       <div className="flex items-center justify-between mb-6">
         <div>

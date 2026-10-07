@@ -1,22 +1,20 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { deleteSchool } from '@/lib/data/schools'
-import { useAuth } from '@/contexts/AuthContext'
 import { Button } from '@/components/ui/Button'
 import { Modal } from '@/components/ui/Modal'
 import { FormField, FieldInput } from '@/components/ui/FormField'
 import { ErrorBanner } from '@/components/ui/ErrorBanner'
 import { errorMessage } from '@/lib/errorMessage'
 
+// Not gated on role here — delete_school itself rejects a non-owner with
+// its own error message, shown below the same way any other error is.
 export function DeleteSchoolSection({ schoolId, code }: { schoolId: string; code: string }) {
-  const { staff } = useAuth()
   const navigate = useNavigate()
   const [open, setOpen] = useState(false)
   const [typed, setTyped] = useState('')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
-
-  if (staff?.role !== 'owner') return null
 
   async function handleDelete() {
     setBusy(true)
