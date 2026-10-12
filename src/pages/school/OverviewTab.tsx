@@ -4,17 +4,46 @@ import type { SchoolDetail } from '@/lib/data/schools'
 import { updateSchoolProject, setSchoolStatus, testAddress, type ResolvedSchool } from '@/lib/data/schools'
 import { attachDedicatedProject } from '@/lib/data/hostingPools'
 import { getSchoolRoleCounts, type SchoolRoleCounts } from '@/lib/data/schoolRoleCounts'
-import { supabaseDashboardLinks, schoolAddress } from '@/lib/constants'
+import { getRemoteSchemaVersion } from '@/lib/data/schemaVersion'
+import {
+  supabaseDashboardLinks,
+  schoolAddress,
+  POOLED_SCHEMA_VERSION,
+  projectRefFromUrl,
+  schemaCatchUpCommands,
+} from '@/lib/constants'
 import { Button } from '@/components/ui/Button'
 import { LinkButton } from '@/components/ui/LinkButton'
 import { Modal } from '@/components/ui/Modal'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { FormField, FieldInput, FieldSelect, FieldTextarea } from '@/components/ui/FormField'
 import { ErrorBanner } from '@/components/ui/ErrorBanner'
-import { StatusBadge } from '@/components/ui/Badge'
+import { StatusBadge, Badge } from '@/components/ui/Badge'
+import { CopyButton } from '@/components/ui/CopyButton'
 import { useToast } from '@/components/ui/Toast'
 import { errorMessage } from '@/lib/errorMessage'
 import { DeleteSchoolSection } from './DeleteSchoolSection'
+
+function SchemaDriftNotice({ projectRef, behindBy }: { projectRef: string | null; behindBy: number | null }) {
+  const commands = projectRef ? schemaCatchUpCommands(projectRef) : null
+  return (
+    <div className="bg-danger-muted/30 border border-danger/30 rounded-xl p-4 space-y-2">
+      <p className="text-sm text-danger font-700">
+        {behindBy === null
+          ? "Could not confirm this project's schema version - safest to assume it's behind."
+          : `Schema is ${behindBy} migration${behindBy === 1 ? '' : 's'} behind. This will not work correctly until pushed.`}
+      </p>
+      {commands && (
+        <>
+          <pre className="text-xs font-mono bg-bg border border-border rounded-lg p-3 overflow-x-auto whitespace-pre-wrap">
+            {commands}
+          </pre>
+          <CopyButton value={commands} />
+        </>
+      )}
+    </div>
+  )
+}
 
 const STATUSES = ['pending', 'active', 'suspended', 'offboarded']
 
@@ -37,6 +66,7 @@ export function OverviewTab({
   const [testError, setTestError] = useState('')
   const [counts, setCounts] = useState<SchoolRoleCounts | null>(null)
   const [countsError, setCountsError] = useState('')
+  const [remoteSchemaVersion, setRemoteSchemaVersion] = useState<number | null | 'error'>(null)
 
   const address = domains.find((d) => d.is_primary)?.hostname ?? schoolAddress(school.code, platformDomain)
   const links = project ? supabaseDashboardLinks(project.supabase_project_ref) : null
@@ -49,6 +79,14 @@ export function OverviewTab({
       .then(setCounts)
       .catch((e) => setCountsError(errorMessage(e)))
   }, [project?.supabase_url, project?.anon_key, project?.kind, school.id])
+
+  useEffect(() => {
+    if (!project) return
+    setRemoteSchemaVersion(null)
+    getRemoteSchemaVersion(project.supabase_url, project.anon_key)
+      .then(setRemoteSchemaVersion)
+      .catch(() => setRemoteSchemaVersion('error'))
+  }, [project?.supabase_url, project?.anon_key])
 
   async function handleTestAddress() {
     setTestResult('pending')
@@ -95,11 +133,30 @@ export function OverviewTab({
       {project ? (
         <div className="bg-surface border border-border rounded-2xl p-6">
           <div className="flex items-center justify-between mb-4">
-            <h3 className="font-display font-700">Connection</h3>
+            <div className="flex items-center gap-2">
+              <h3 className="font-display font-700">Connection</h3>
+              {remoteSchemaVersion === null && <Badge color="muted">Checking schema…</Badge>}
+              {remoteSchemaVersion === 'error' && <Badge color="danger">Schema unknown</Badge>}
+              {typeof remoteSchemaVersion === 'number' &&
+                (remoteSchemaVersion >= POOLED_SCHEMA_VERSION ? (
+                  <Badge color="success">Schema up to date</Badge>
+                ) : (
+                  <Badge color="danger">{POOLED_SCHEMA_VERSION - remoteSchemaVersion} migrations behind</Badge>
+                ))}
+            </div>
             <Button size="sm" variant="secondary" onClick={() => setEditOpen(true)}>
               Edit connection
             </Button>
           </div>
+          {(remoteSchemaVersion === 'error' ||
+            (typeof remoteSchemaVersion === 'number' && remoteSchemaVersion < POOLED_SCHEMA_VERSION)) && (
+            <div className="mb-4">
+              <SchemaDriftNotice
+                projectRef={project.supabase_project_ref}
+                behindBy={typeof remoteSchemaVersion === 'number' ? POOLED_SCHEMA_VERSION - remoteSchemaVersion : null}
+              />
+            </div>
+          )}
           <div className="grid grid-cols-2 gap-x-6 gap-y-3 text-sm">
             <div>
               <p className="text-xs text-muted">Project URL</p>
@@ -258,6 +315,7 @@ function EditConnectionForm({
   const [region, setRegion] = useState(project?.region ?? '')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
+  const [drift, setDrift] = useState<{ projectRef: string | null; behindBy: number | null } | null>(null)
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault()
@@ -268,7 +326,18 @@ function EditConnectionForm({
     }
     setBusy(true)
     setError('')
+    setDrift(null)
     try {
+      if (project?.kind === 'dedicated') {
+        const remoteVersion = await getRemoteSchemaVersion(url, trimmed).catch(() => null)
+        if (remoteVersion === null || remoteVersion < POOLED_SCHEMA_VERSION) {
+          setDrift({
+            projectRef: projectRefFromUrl(url),
+            behindBy: remoteVersion === null ? null : POOLED_SCHEMA_VERSION - remoteVersion,
+          })
+          return
+        }
+      }
       await updateSchoolProject(schoolId, url, trimmed, region)
       await onSaved()
     } catch (e) {
@@ -290,6 +359,7 @@ function EditConnectionForm({
         <FieldInput required value={region} onChange={(e) => setRegion(e.target.value)} />
       </FormField>
       {error && <ErrorBanner message={error} />}
+      {drift && <SchemaDriftNotice projectRef={drift.projectRef} behindBy={drift.behindBy} />}
       <div className="flex justify-end">
         <Button type="submit" loading={busy}>
           Save
@@ -305,6 +375,7 @@ function AttachProjectForm({ schoolId, onAttached }: { schoolId: string; onAttac
   const [region, setRegion] = useState('')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
+  const [drift, setDrift] = useState<{ projectRef: string | null; behindBy: number | null } | null>(null)
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault()
@@ -315,7 +386,16 @@ function AttachProjectForm({ schoolId, onAttached }: { schoolId: string; onAttac
     }
     setBusy(true)
     setError('')
+    setDrift(null)
     try {
+      const remoteVersion = await getRemoteSchemaVersion(url, trimmed).catch(() => null)
+      if (remoteVersion === null || remoteVersion < POOLED_SCHEMA_VERSION) {
+        setDrift({
+          projectRef: projectRefFromUrl(url),
+          behindBy: remoteVersion === null ? null : POOLED_SCHEMA_VERSION - remoteVersion,
+        })
+        return
+      }
       await attachDedicatedProject(schoolId, url, trimmed, region)
       await onAttached()
     } catch (e) {
@@ -337,6 +417,7 @@ function AttachProjectForm({ schoolId, onAttached }: { schoolId: string; onAttac
         <FieldInput required value={region} onChange={(e) => setRegion(e.target.value)} />
       </FormField>
       {error && <ErrorBanner message={error} />}
+      {drift && <SchemaDriftNotice projectRef={drift.projectRef} behindBy={drift.behindBy} />}
       <div className="flex justify-end">
         <Button type="submit" loading={busy}>
           Attach project
