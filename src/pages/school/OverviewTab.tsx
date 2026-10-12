@@ -1,8 +1,9 @@
-import { useState, type FormEvent } from 'react'
+import { useEffect, useState, type FormEvent } from 'react'
 import { ExternalLink, RefreshCw } from 'lucide-react'
 import type { SchoolDetail } from '@/lib/data/schools'
 import { updateSchoolProject, setSchoolStatus, testAddress, type ResolvedSchool } from '@/lib/data/schools'
 import { attachDedicatedProject } from '@/lib/data/hostingPools'
+import { getSchoolRoleCounts, type SchoolRoleCounts } from '@/lib/data/schoolRoleCounts'
 import { supabaseDashboardLinks, schoolAddress } from '@/lib/constants'
 import { Button } from '@/components/ui/Button'
 import { LinkButton } from '@/components/ui/LinkButton'
@@ -34,9 +35,20 @@ export function OverviewTab({
   const [reason, setReason] = useState('')
   const [testResult, setTestResult] = useState<ResolvedSchool | null | 'pending'>(null)
   const [testError, setTestError] = useState('')
+  const [counts, setCounts] = useState<SchoolRoleCounts | null>(null)
+  const [countsError, setCountsError] = useState('')
 
   const address = domains.find((d) => d.is_primary)?.hostname ?? schoolAddress(school.code, platformDomain)
   const links = project ? supabaseDashboardLinks(project.supabase_project_ref) : null
+
+  useEffect(() => {
+    if (!project || project.kind !== 'pooled') return
+    setCounts(null)
+    setCountsError('')
+    getSchoolRoleCounts(project.supabase_url, project.anon_key, school.id)
+      .then(setCounts)
+      .catch((e) => setCountsError(errorMessage(e)))
+  }, [project?.supabase_url, project?.anon_key, project?.kind, school.id])
 
   async function handleTestAddress() {
     setTestResult('pending')
@@ -130,6 +142,30 @@ export function OverviewTab({
               toast('success', 'Project attached.')
             }}
           />
+        </div>
+      )}
+
+      {project?.kind === 'pooled' && (
+        <div className="bg-surface border border-border rounded-2xl p-6">
+          <h3 className="font-display font-700 mb-4">Members</h3>
+          {countsError && <ErrorBanner message={countsError} />}
+          {!countsError && (
+            <div className="grid grid-cols-4 gap-4 text-center">
+              {(
+                [
+                  ['Students', counts?.students],
+                  ['Teachers', counts?.teachers],
+                  ['Parents', counts?.parents],
+                  ['Admins', counts?.admins],
+                ] as const
+              ).map(([label, value]) => (
+                <div key={label}>
+                  <p className="text-2xl font-display font-800">{value ?? '—'}</p>
+                  <p className="text-xs text-muted">{label}</p>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       )}
 
