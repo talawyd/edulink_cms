@@ -72,13 +72,13 @@ export function OverviewTab({
   const links = project ? supabaseDashboardLinks(project.supabase_project_ref) : null
 
   useEffect(() => {
-    if (!project || project.kind !== 'pooled') return
+    if (!project) return
     setCounts(null)
     setCountsError('')
     getSchoolRoleCounts(project.supabase_url, project.anon_key, school.id)
       .then(setCounts)
       .catch((e) => setCountsError(errorMessage(e)))
-  }, [project?.supabase_url, project?.anon_key, project?.kind, school.id])
+  }, [project?.supabase_url, project?.anon_key, school.id])
 
   useEffect(() => {
     if (!project) return
@@ -202,7 +202,7 @@ export function OverviewTab({
         </div>
       )}
 
-      {project?.kind === 'pooled' && (
+      {project && (
         <div className="bg-surface border border-border rounded-2xl p-6">
           <h3 className="font-display font-700 mb-4">Members</h3>
           {countsError && <ErrorBanner message={countsError} />}
